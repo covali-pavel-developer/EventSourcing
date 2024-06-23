@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<NoWarn>S4136</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="EventSourcing.Tests.Unit" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\EventSourcing.Commands\EventSourcing.Commands.csproj" />
+		<ProjectReference Include="..\EventSourcing.Events\EventSourcing.Events.csproj" />
+	</ItemGroup>
+
+</Project>
