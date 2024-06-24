@@ -95,4 +95,4 @@ For detailed documentation, examples, and API references, please visit my [GitHu
 I welcome contributions from the community! Please read my contributing guidelines on GitHub to get started.
 
 ### License
-This project is licensed under the MIT License. See the LICENSE file for more information.
+This project is licensed under the MIT License. See the [LICENSE](https://github.com/covali-pavel-developer/EventSourcing/blob/main/LICENSE.txt) file for more information.
