@@ -18,11 +18,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Using Include="Xunit" />
+	  <ProjectReference Include="..\EventSourcing\EventSourcing.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\EventSourcing.Extensions\EventSourcing.Extensions.csproj" />
+		<Using Include="Xunit" />
 	</ItemGroup>
 
 </Project>

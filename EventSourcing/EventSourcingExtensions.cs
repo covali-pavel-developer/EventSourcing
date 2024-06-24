@@ -7,7 +7,7 @@ using EventSourcing.Events.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace EventSourcing.Extensions;
+namespace EventSourcing;
 
 /// <summary>
 ///     Represents event-sourcing extensions.

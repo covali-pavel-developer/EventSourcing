@@ -2,7 +2,6 @@
 using System.Reflection;
 using EventSourcing.Commands.Concurrent;
 using EventSourcing.Commands.Concurrent.Internal;
-using EventSourcing.Extensions;
 using EventSourcing.Tests.Unit.Commands.Stubs;
 
 namespace EventSourcing.Tests.Unit.Commands.Concurrent;

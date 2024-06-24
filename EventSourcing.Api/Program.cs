@@ -1,7 +1,7 @@
+using EventSourcing;
 using EventSourcing.Api.Commands;
 using EventSourcing.Api.Events;
 using EventSourcing.Api.Models;
-using EventSourcing.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 

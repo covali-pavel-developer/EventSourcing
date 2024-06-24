@@ -13,7 +13,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\EventSourcing.Extensions\EventSourcing.Extensions.csproj" />
+	  <ProjectReference Include="..\EventSourcing\EventSourcing.csproj" />
 	</ItemGroup>
 
 </Project>
