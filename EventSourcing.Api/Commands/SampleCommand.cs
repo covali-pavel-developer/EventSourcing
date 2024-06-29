@@ -8,7 +8,7 @@ public class SampleCommand(int number) : ICommand<BaseResult>
     public int Number { get; init; } = number;
 }
 
-public class TestCommandHandler(ILogger<TestCommandHandler> logger)
+public class SampleCommandHandler(ILogger<SampleCommandHandler> logger)
     : ICommandHandler<SampleCommand, BaseResult>
 {
     public async Task<BaseResult> HandleAsync(SampleCommand command, CancellationToken ct)
