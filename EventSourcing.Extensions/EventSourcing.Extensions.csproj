@@ -2,8 +2,8 @@
 
 	<PropertyGroup>
 		<Version>8.0.0</Version>
-		<Title>EventSourcing</Title>
-		<PackageId>EventSourcing</PackageId>
+		<Title>EventSourcing.Extensions</Title>
+		<PackageId>EventSourcing.Extensions</PackageId>
 		<PackageProjectUrl>https://www.nuget.org/packages/EventSourcing</PackageProjectUrl>
 	</PropertyGroup>
 

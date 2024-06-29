@@ -14,7 +14,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\EventSourcing\EventSourcing.csproj" />
+	  <ProjectReference Include="..\EventSourcing.Extensions\EventSourcing.Extensions.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
