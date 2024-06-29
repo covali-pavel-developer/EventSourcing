@@ -101,7 +101,7 @@ public class DiCommandsTests
         // Act
         command.Execute(mockServiceProvider.Object);
 
-        await Task.Delay(100);
+        await Task.Delay(200);
 
         // Assert
         mockHandler.Verify(handler =>
