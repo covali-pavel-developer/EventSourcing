@@ -1,5 +1,5 @@
 # EventSourcing
-[![NuGet](https://img.shields.io/nuget/v/EventSourcing.png)](https://www.nuget.org/packages/EventSourcing)
+[![NuGet](https://img.shields.io/nuget/v/EventSourcing.Extensions)](https://www.nuget.org/packages/EventSourcing)
 
 ## Overview
 The `EventSourcing` library for .NET provides a robust, flexible, and efficient framework for implementing event sourcing in your .NET applications. This library facilitates capturing changes to an application's state as a series of events, allowing for easy auditing, debugging, and replaying of events to restore state.
