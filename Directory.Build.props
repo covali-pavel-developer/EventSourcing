@@ -1,0 +1,34 @@
+<Project>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<NoWarn>S4136</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<Description>Simplifies implementation of event sourcing with efficient in-memory event bus, powerful command bus, built-in concurrency control, and easy extensibility.</Description>
+
+		<RepositoryType>git</RepositoryType>
+		<RepositoryUrl>https://github.com/covali-pavel-developer/EventSourcing</RepositoryUrl>
+
+		<Authors>cva_pasha</Authors>
+		<Copyright>Copyright (c) 2024 cva_pasha</Copyright>
+		<RequireLicenseAcceptance>true</RequireLicenseAcceptance>
+		<LicenseUrl>https://github.com/covali-pavel-developer/EventSourcing/blob/main/LICENSE.txt</LicenseUrl>
+
+		<PackageIcon>EventSourcing.png</PackageIcon>
+		<PackageType>Dependency</PackageType>
+		<PackageTags>Events;Commands;EventSourcing;EventBus;CommandBus;CQRS;Patterns;Concurrency;EventDriven;Library</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="EventSourcing.Tests.Unit" />
+	</ItemGroup>
+</Project>

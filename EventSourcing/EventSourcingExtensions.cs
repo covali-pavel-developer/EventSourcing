@@ -20,10 +20,6 @@ public static class EventSourcingExtensions
     /// <summary>
     ///     Register event or command handlers in the dependency injection container.
     /// </summary>
-    /// <remarks>
-    ///     IMPORTANT: Concurrent commands are not added to DI,
-    ///     you can use extensions execution only.
-    /// </remarks>
     /// <param name="services">
     ///     The <see cref="IServiceCollection" /> to which the event or command handlers will be added.
     /// </param>
@@ -210,7 +206,7 @@ public static class EventSourcingExtensions
         this IConcurrentCommand<TResult> command,
         CancellationToken ct = default)
     {
-        return await ExecuteAsync<TResult>(command, ServiceProvider, ct);
+        return await ExecuteAsync(command, ServiceProvider, ct);
     }
 
     /// <summary>

@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<NoWarn>S4136</NoWarn>
+		<Version>8.0.0</Version>
+		<Title>EventSourcing.Events</Title>
+		<PackageId>EventSourcing.Events</PackageId>
+		<PackageProjectUrl>https://www.nuget.org/packages/EventSourcing.Events</PackageProjectUrl>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -12,7 +12,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<InternalsVisibleTo Include="EventSourcing.Tests.Unit" />
+		<None Include="..\README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
 	</ItemGroup>
 
 </Project>
