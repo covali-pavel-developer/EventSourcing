@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<Version>8.0.0</Version>
+		<Version>8.0.1</Version>
 		<Title>EventSourcing.Commands</Title>
 		<PackageId>EventSourcing.Commands</PackageId>
 		<PackageProjectUrl>https://www.nuget.org/packages/EventSourcing.Commands</PackageProjectUrl>
