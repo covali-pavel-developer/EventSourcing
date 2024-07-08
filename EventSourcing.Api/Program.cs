@@ -1,4 +1,3 @@
-using EventSourcing;
 using EventSourcing.Api.Commands;
 using EventSourcing.Api.Events;
 using EventSourcing.Api.Models;
@@ -6,12 +5,11 @@ using EventSourcing.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-builder.Services.AddEventSourcing(typeof(SampleCommand));
-
-builder.Services.AddHttpContextAccessor();
+builder.Services
+    .AddEndpointsApiExplorer()
+    .AddSwaggerGen()
+    .AddHttpContextAccessor()
+    .AddEventSourcing(typeof(SampleCommand));
 
 var app = builder.Build();
 

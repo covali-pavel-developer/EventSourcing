@@ -59,6 +59,7 @@ public class ConcurrentCommandBus : IConcurrentCommandBus
         }
     }
 
+    /// <inheritdoc />
     public void Execute<TCommand, TResult>(TCommand command)
         where TCommand : IConcurrentCommand<TResult>
     {

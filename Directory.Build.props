@@ -3,7 +3,7 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<NoWarn>S4136</NoWarn>
+		<NoWarn>S4136;S2223</NoWarn>
 	</PropertyGroup>
 
 	<PropertyGroup>

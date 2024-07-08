@@ -30,8 +30,10 @@ public static class EventExtensions
                 $"Handler for event type {eventType.Name} not registered.");
 
         foreach (var handler in handlers)
-            if (handler != null)
-                await handler.HandleAsync((dynamic)eventModel);
+        {
+            if (handler is null || !handler.GetType().IsPublic) continue;
+            await handler.HandleAsync((dynamic)eventModel);
+        }
     }
 
     /// <summary>

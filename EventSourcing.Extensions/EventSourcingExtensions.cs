@@ -6,6 +6,7 @@ using EventSourcing.Events;
 using EventSourcing.Events.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace EventSourcing.Extensions;
 
@@ -31,53 +32,31 @@ public static class EventSourcingExtensions
         this IServiceCollection services,
         params Type[] types)
     {
+        var logger = services
+            .BuildServiceProvider()
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger(nameof(EventSourcing));
+
+        var loggerEnabled = logger.IsEnabled(LogLevel.Debug);
+
+        if (loggerEnabled)
+        {
+            logger.LogDebug("Starting to register event and command handlers.");
+        }
+
         var handlersTypes = types
             .Select(t => t.Assembly)
             .Distinct()
             .SelectMany(t => t.GetTypes())
-            .Where(t => t is { IsInterface: false, IsAbstract: false })
-            .SelectMany(t => t.GetInterfaces(), (implementationType, serviceType) => new
-            {
-                implementationType,
-                serviceType
-            }
-            )
+            .Where(t => t is { IsInterface: false, IsAbstract: false, IsPublic: true })
+            .SelectMany(t => t.GetInterfaces(), (implementationType, serviceType) => (implementationType, serviceType))
             .Where(t => t.serviceType.IsGenericType);
 
-        var commandGenericTypes = new List<Type>
-        {
-            typeof(ICommandHandler<>),
-            typeof(ICommandHandler<,>)
-        };
-
-        var commandsHandlers = handlersTypes
-            .Where(t => commandGenericTypes.Exists(
-                x => x == t.serviceType.GetGenericTypeDefinition()))
-            .ToList();
-
-        var concurrentCommandGenericTypes = new List<Type>
-        {
-            typeof(IConcurrentCommandHandler<,>)
-        };
-
-        var concurrentCommandsHandlers = handlersTypes
-            .Where(t => concurrentCommandGenericTypes.Exists(
-                x => x == t.serviceType.GetGenericTypeDefinition()))
-            .ToList();
-
-        var eventGenericType = typeof(IEventHandler<>);
-        var eventHandlers = handlersTypes
-            .Where(t => t.serviceType == eventGenericType)
-            .ToList();
-
-        var handlers = commandsHandlers
-            .Concat(eventHandlers)
-            .Concat(concurrentCommandsHandlers);
-
-        foreach (var handler in handlers)
-            services.TryAddTransient(handler.serviceType, handler.implementationType);
-
-        ServiceProvider = services.BuildServiceProvider();
+        ServiceProvider = services
+            .RegisterCommandHandlers(handlersTypes, logger)
+            .RegisterConcurrentCommandHandlers(handlersTypes, logger)
+            .RegisterEventHandlers(handlersTypes, logger)
+            .BuildServiceProvider();
 
         return services;
     }
@@ -324,4 +303,87 @@ public static class EventSourcingExtensions
     }
 
     #endregion
+
+    private static IServiceCollection RegisterCommandHandlers(
+        this IServiceCollection services,
+        IEnumerable<(Type implementationType, Type serviceType)> handlersTypes,
+        ILogger logger)
+    {
+        var commandGenericTypes = new List<Type>
+        {
+            typeof(ICommandHandler<>),
+            typeof(ICommandHandler<,>)
+        };
+
+        var commandsHandlers = handlersTypes
+            .Where(t => commandGenericTypes.Exists(
+                x => x == t.serviceType.GetGenericTypeDefinition()))
+            .ToList();
+
+        foreach (var (implementationType, serviceType) in commandsHandlers)
+        {
+            services.TryAddTransient(serviceType, implementationType);
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("Registered {Count} command handlers.",
+                commandsHandlers.Count);
+        }
+
+        return services;
+    }
+
+    private static IServiceCollection RegisterConcurrentCommandHandlers(
+        this IServiceCollection services,
+        IEnumerable<(Type implementationType, Type serviceType)> handlersTypes,
+        ILogger logger)
+    {
+        var concurrentCommandGenericTypes = new List<Type>
+        {
+            typeof(IConcurrentCommandHandler<,>)
+        };
+
+        var concurrentCommandsHandlers = handlersTypes
+            .Where(t => concurrentCommandGenericTypes.Exists(
+                x => x == t.serviceType.GetGenericTypeDefinition()))
+            .ToList();
+
+        foreach (var (implementationType, serviceType) in concurrentCommandsHandlers)
+        {
+            services.TryAddTransient(serviceType, implementationType);
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("Registered {Count} concurrent command handlers.",
+                concurrentCommandsHandlers.Count);
+        }
+
+        return services;
+    }
+
+    private static IServiceCollection RegisterEventHandlers(
+        this IServiceCollection services,
+        IEnumerable<(Type implementationType, Type serviceType)> handlersTypes,
+        ILogger logger)
+    {
+        var eventGenericType = typeof(IEventHandler<>);
+        var eventHandlers = handlersTypes
+            .Where(t => t.serviceType == eventGenericType)
+            .ToList();
+
+        foreach (var (implementationType, serviceType) in eventHandlers)
+        {
+            services.TryAddTransient(serviceType, implementationType);
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("Registered {Count} event handlers.",
+                eventHandlers.Count);
+        }
+
+        return services;
+    }
 }

@@ -2,4 +2,4 @@
 
 namespace EventSourcing.Api.Events;
 
-public class SampleEvent(int Number) : IEvent;
+public record SampleEvent(int Number) : IEvent;

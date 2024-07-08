@@ -33,6 +33,12 @@ public static class CommandExtensions
             ?? throw new InvalidOperationException(
                 $"Handler for command type {type.Name} not registered.");
 
+        if (!handler.GetType().IsPublic)
+        {
+            throw new InvalidOperationException(
+                $"Handler for command type {type.Name} is not public.");
+        }
+
         await handler.HandleAsync((dynamic)command, ct);
     }
 
@@ -81,6 +87,12 @@ public static class CommandExtensions
             serviceProvider.GetService(handlerType)
             ?? throw new InvalidOperationException(
                 $"Handler for command type {type.Name} not registered.");
+
+        if (!handler.GetType().IsPublic)
+        {
+            throw new InvalidOperationException(
+                $"Handler for command type {type.Name} is not public.");
+        }
 
         return (TResult)await handler.HandleAsync((dynamic)command, ct);
     }

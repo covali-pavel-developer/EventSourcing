@@ -3,22 +3,18 @@ using EventSourcing.Commands.Concurrent;
 
 namespace EventSourcing.Api.Commands;
 
-public class ConcurrentCommand(int number) : IConcurrentCommand<BaseResult>
-{
-    public int Number { get; init; } = number;
-}
+public record ConcurrentCommand(int Number) : IConcurrentCommand<BaseResult>;
 
-public class ConcurrentCommandHandler(ILogger<ConcurrentCommandHandler> logger)
+public sealed class ConcurrentCommandHandler(ILogger<ConcurrentCommandHandler> logger)
     : IConcurrentCommandHandler<ConcurrentCommand, BaseResult>
 {
     public int ConcurrentCount { get; init; } = 1;
 
-    public async Task<BaseResult> HandleAsync(ConcurrentCommand command, CancellationToken ct)
+    public async Task<BaseResult> HandleAsync(ConcurrentCommand command, CancellationToken ct = default)
     {
         await Task.Delay(TimeSpan.FromSeconds(1), ct);
-
-        var message = $"{nameof(ConcurrentCommandHandler)}-{command.Number} handled at {DateTime.Now:HH:mm:ss.fff}";
-        logger.LogInformation(message + "\n");
+        var message = $"{nameof(ConcurrentCommandHandler)} with number: {command.Number} handled at {DateTime.Now:HH:mm:ss.fff}";
+        logger.LogInformation(message);
         return new BaseResult(command.Number, message);
     }
 }

@@ -3,18 +3,17 @@ using EventSourcing.Commands;
 
 namespace EventSourcing.Api.Commands;
 
-public class SampleCommand(int number) : ICommand<BaseResult>
-{
-    public int Number { get; init; } = number;
-}
+public record SampleCommand(int Number) : ICommand<BaseResult>;
 
-public class SampleCommandHandler(ILogger<SampleCommandHandler> logger)
+public sealed class SampleCommandHandler(
+    ILogger<SampleCommandHandler> logger
+)
     : ICommandHandler<SampleCommand, BaseResult>
 {
-    public async Task<BaseResult> HandleAsync(SampleCommand command, CancellationToken ct)
+    public Task<BaseResult> HandleAsync(SampleCommand command, CancellationToken ct = default)
     {
-        var message = $"{nameof(ConcurrentCommandHandler)}-{command.Number} handled at {DateTime.Now:HH:mm:ss.fff}";
-        logger.LogInformation(message + "\n");
-        return new BaseResult(command.Number, message);
+        var message = $"{nameof(SampleCommandHandler)} with number: {command.Number} handled at {DateTime.Now:HH:mm:ss.fff}";
+        logger.LogInformation(message);
+        return Task.FromResult(new BaseResult(command.Number, message));
     }
 }

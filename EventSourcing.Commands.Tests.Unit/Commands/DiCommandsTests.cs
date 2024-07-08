@@ -76,6 +76,22 @@ public class DiCommandsTests
             command.ExecuteAsync(mockServiceProvider.Object));
     }
 
+    [Fact]
+    public async Task ExecuteAsync_NonPublicHandler_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var command = new SampleCommand();
+        var serviceProviderMock = new Mock<IServiceProvider>();
+
+        serviceProviderMock
+            .Setup(e => e.GetService(typeof(ICommandHandler<SampleCommand>)))
+            .Returns(new InternalCommandHandler());
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await command.ExecuteAsync(serviceProviderMock.Object));
+    }
+
     #endregion
 
     #region [ Execute ]
