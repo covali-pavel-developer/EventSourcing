@@ -15,6 +15,7 @@ public interface IEventBus
     /// </summary>
     /// <typeparam name="TEvent">The type of the event.</typeparam>
     /// <param name="handler">The event handler.</param>
+    /// <exception cref="ArgumentNullException" />
     void Subscribe<TEvent>(IEventHandler<TEvent> handler) where TEvent : IEvent;
 
     /// <summary>
@@ -22,6 +23,7 @@ public interface IEventBus
     /// </summary>
     /// <typeparam name="TEvent">The type of the event.</typeparam>
     /// <param name="eventModel">The event model.</param>
+    /// <exception cref="ArgumentNullException" />
     /// <exception cref="InvalidOperationException" />
     Task PublishAsync<TEvent>(TEvent eventModel) where TEvent : IEvent;
 
@@ -30,6 +32,6 @@ public interface IEventBus
     /// </summary>
     /// <typeparam name="TEvent">The type of the event.</typeparam>
     /// <param name="eventModel">The event model.</param>
-    /// <exception cref="InvalidOperationException" />
+    /// <exception cref="ArgumentNullException" />
     void Publish<TEvent>(TEvent eventModel) where TEvent : IEvent;
 }

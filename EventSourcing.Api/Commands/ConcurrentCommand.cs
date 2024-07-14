@@ -18,3 +18,17 @@ public sealed class ConcurrentCommandHandler(ILogger<ConcurrentCommandHandler> l
         return new BaseResult(command.Number, message);
     }
 }
+
+public sealed class AnotherConcurrentCommandHandler(ILogger<ConcurrentCommandHandler> logger)
+    : IConcurrentCommandHandler<ConcurrentCommand, BaseResult>
+{
+    public int ConcurrentCount { get; init; } = 2;
+
+    public async Task<BaseResult> HandleAsync(ConcurrentCommand command, CancellationToken ct = default)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(1), ct);
+        var message = $"{nameof(AnotherConcurrentCommandHandler)} with number: {command.Number} handled at {DateTime.Now:HH:mm:ss.fff}";
+        logger.LogInformation(message);
+        return new BaseResult(command.Number, message);
+    }
+}

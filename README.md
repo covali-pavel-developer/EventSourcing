@@ -5,11 +5,20 @@
 The `EventSourcing` library for .NET provides a robust, flexible, and efficient framework for implementing event sourcing in your .NET applications. This library facilitates capturing changes to an application's state as a series of events, allowing for easy auditing, debugging, and replaying of events to restore state.
 
 ## Features
-- **Event Bus**: Efficiently publish and subscribe to events using an in-memory event bus with support for dependency injection (DI).
-- **Command Bus**: Simplify command handling with a powerful command bus that supports both synchronous and asynchronous command execution.
+- **EventBus**: Efficiently publish and subscribe to events using an in-memory event bus with support for dependency injection (DI).
+- **CommandBus**: Simplify command handling with a powerful command bus that supports both synchronous and asynchronous command execution.
+- **Queries**: Separating queries from commands enhances maintainability, performance, scalability, security, and simplifies testing by clearly distinguishing between read and write operations.
 - **Concurrency Control**: Manage concurrent command executions with built-in concurrency handling mechanisms to ensure data integrity.
 - **Extensibility**: Easily extend and customize the framework to fit your specific needs, with interfaces and abstractions that promote clean architecture principles.
 - **Dependency Injection**: Seamlessly integrate with the .NET dependency injection (DI) container to resolve and inject event and command handlers.
+
+### Handlers
+- **Visibility**: All handlers must be public.
+
+- **Events Handlers**: These are executed in parallel. If no public handlers are found, execution will complete without errors.
+- **Queries Handlers**: Only one handler can be registered for each query type.
+- **Commands Handlers**: These are also executed in parallel. For asynchronous execution, the system waits for all handlers to finish, and the response is taken from the first handler that completes.
+- **Concurrency Handlers**: These handlers are executed in parallel, with concurrency control applied per handler type.
 
 ### Dependency Injection
 The `EventSourcingExtensions` class provides extension methods designed for configuring event sourcing within a .NET application. It facilitates the registration of event and command handlers into the dependency injection (DI) container. This is achieved by specifying an array of Type objects representing the types from which event or command handlers should be registered. This ensures that handlers are correctly resolved and utilized throughout the application.
@@ -53,7 +62,21 @@ Alternatively, handlers can be automatically registered using the `AddEventSourc
 - **Synchronously executes**: An command by invoking `Execute` on a background task.
 - **Asynchronousle executes**: Supports asynchronous command handling via `ExecuteAsync`.
 
+### Queries
+- **Separation of Concerns**: Dividing queries from commands ensures a clear distinction between operations that change state (commands) and those that only retrieve data (queries). This separation enhances maintainability and readability of the code.
+- **Optimized Performance**: Queries can be optimized for read performance, while commands can be optimized for write performance. This allows for more efficient handling of data access and modification.
+- **Scalability**: Separating queries and commands allows for independent scaling. Read-heavy operations can be scaled differently from write-heavy operations, improving the overall performance and scalability of the system.
+- **Security and Validation**: Commands often require validation and authorization checks before altering the state, while queries typically do not. This separation allows for more granular control over security policies.
+- **Simplified Testing**: Dividing queries from commands simplifies unit testing. Queries can be tested independently of the state-changing logic, and vice versa, leading to more isolated and reliable tests.
+
+**Features**
+
+- **Dependency Injection (DI) Support**:
+Alternatively, handlers can be automatically registered using the AddEventSourcing method from EventSourcingExtensions.
+
 ## Getting Started
+For additional examples and usage details, please use [EventSourcing.Api](https://github.com/covali-pavel-developer/EventSourcing/tree/main/EventSourcing.Api) project. 
+
 ### Installation
 Add the EventSourcing library to your project via NuGet:
 ```bash
@@ -175,6 +198,25 @@ await commandBus.ExecuteAsync(new RegisterUserCommand
     UserName = "JohnDoe",
     Email = "john.doe@example.com"
 });
+```
+
+#### Queries Setup
+To configure the Queries for executing, follow these steps:
+
+Define your query by implementing the respective interfaces:
+```csharp
+public record GetUserQuery(string Id) : IQuery<CustomerEntity>;
+```
+
+Implement handlers for your query:
+```csharp
+public sealed class GetUserQueryHandler : IQueryHandler<GetUserQuery, CustomerEntity>
+{
+    public async Task<CustomerEntity> HandleAsync(GetUserQuery query, CancellationToken ct = default)
+    {
+        // Handle the query
+    }
+}
 ```
 
 ### Contributing

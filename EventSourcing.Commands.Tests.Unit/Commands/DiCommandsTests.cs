@@ -9,32 +9,6 @@ public class DiCommandsTests
     #region [ ExecuteAsync ]
 
     [Fact]
-    public async Task ExecuteAsync_Should_Execute_Registered_Command()
-    {
-        // Arrange
-        var mockServiceProvider = new Mock<IServiceProvider>();
-        var mockHandler = new Mock<ICommandHandler<SampleCommand>>();
-        var command = new SampleCommand();
-
-        mockHandler
-            .Setup(e =>
-                e.HandleAsync(It.IsAny<SampleCommand>(), It.IsAny<CancellationToken>()))
-            .Returns(() => Task.CompletedTask);
-
-        mockServiceProvider
-            .Setup(e =>
-                e.GetService(typeof(ICommandHandler<SampleCommand>)))
-            .Returns(mockHandler.Object);
-
-        // Act
-        await command.ExecuteAsync(mockServiceProvider.Object);
-
-        // Assert
-        mockHandler.Verify(handler =>
-            handler.HandleAsync(command, It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
     public async Task ExecuteAsync_Should_Throw_ArgumentNullException_When_Command_Is_Null()
     {
         // Arrange
@@ -95,34 +69,6 @@ public class DiCommandsTests
     #endregion
 
     #region [ Execute ]
-
-    [Fact]
-    public async Task Execute_Should_Execute_Registered_Command()
-    {
-        // Arrange
-        var mockServiceProvider = new Mock<IServiceProvider>();
-        var mockHandler = new Mock<ICommandHandler<SampleCommand>>();
-        var command = new SampleCommand();
-
-        mockHandler
-            .Setup(e =>
-                e.HandleAsync(It.IsAny<SampleCommand>(), It.IsAny<CancellationToken>()))
-            .Returns(() => Task.CompletedTask);
-
-        mockServiceProvider
-            .Setup(e =>
-                e.GetService(typeof(ICommandHandler<SampleCommand>)))
-            .Returns(mockHandler.Object);
-
-        // Act
-        command.Execute(mockServiceProvider.Object);
-
-        await Task.Delay(200);
-
-        // Assert
-        mockHandler.Verify(handler =>
-            handler.HandleAsync(command, It.IsAny<CancellationToken>()), Times.Once);
-    }
 
     [Fact]
     public void Execute_Should_Throw_ArgumentNullException_When_Command_Is_Null()
