@@ -1,4 +1,6 @@
-﻿namespace EventSourcing.Commands.Extensions;
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace EventSourcing.Commands.Extensions;
 
 /// <summary>
 ///     Extension methods for <see cref="ICommand" />.
@@ -14,6 +16,7 @@ public static class CommandExtensions
     /// <param name="command">The command to be executed.</param>
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="ct">Optional <see cref="CancellationToken" /> to cancel the execution.</param>
+    /// <exception cref="ArgumentNullException" />
     /// <exception cref="InvalidOperationException" />
     public static async Task ExecuteAsync<TCommand>(
         this TCommand command,
@@ -28,18 +31,19 @@ public static class CommandExtensions
         var handlerType = typeof(ICommandHandler<>)
             .MakeGenericType(type);
 
-        dynamic handler =
-            serviceProvider.GetService(handlerType)
-            ?? throw new InvalidOperationException(
+        List<dynamic> handlers = serviceProvider.GetServices(handlerType)
+            .Where(handler => handler!.GetType().IsPublic)
+            .ToList()!;
+
+        if (handlers.Count == 0)
+            throw new InvalidOperationException(
                 $"Handler for command type {type.Name} not registered.");
 
-        if (!handler.GetType().IsPublic)
-        {
-            throw new InvalidOperationException(
-                $"Handler for command type {type.Name} is not public.");
-        }
+        var tasks = handlers
+            .Select(handler => (Task)handler.HandleAsync((dynamic)command, ct))
+            .ToList();
 
-        await handler.HandleAsync((dynamic)command, ct);
+        await Task.WhenAll(tasks);
     }
 
     /// <summary>
@@ -50,7 +54,7 @@ public static class CommandExtensions
     /// </typeparam>
     /// <param name="command">The command to be executed.</param>
     /// <param name="serviceProvider">The service provider.</param>
-    /// <exception cref="InvalidOperationException" />
+    /// <exception cref="ArgumentNullException" />
     public static void Execute<TCommand>(
         this TCommand command,
         IServiceProvider serviceProvider) where TCommand : ICommand
@@ -69,6 +73,7 @@ public static class CommandExtensions
     /// <param name="command">The command to be executed.</param>
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="ct">Optional <see cref="CancellationToken" /> to cancel the execution.</param>
+    /// <exception cref="ArgumentNullException" />
     /// <exception cref="InvalidOperationException" />
     public static async Task<TResult> ExecuteAsync<TResult>(
         this ICommand<TResult> command,
@@ -83,18 +88,23 @@ public static class CommandExtensions
         var handlerType = typeof(ICommandHandler<,>)
             .MakeGenericType(type, typeof(TResult));
 
-        dynamic handler =
-            serviceProvider.GetService(handlerType)
-            ?? throw new InvalidOperationException(
+        List<dynamic> handlers = serviceProvider.GetServices(handlerType)
+            .Where(handler => handler!.GetType().IsPublic)
+            .ToList()!;
+
+        if (handlers.Count == 0)
+            throw new InvalidOperationException(
                 $"Handler for command type {type.Name} not registered.");
 
-        if (!handler.GetType().IsPublic)
-        {
-            throw new InvalidOperationException(
-                $"Handler for command type {type.Name} is not public.");
-        }
+        var tasks = handlers
+            .Select(x => (Task<TResult>)x.HandleAsync((dynamic)command, ct))
+            .ToList();
 
-        return (TResult)await handler.HandleAsync((dynamic)command, ct);
+        var firstCompletedTask = await Task.WhenAny(tasks);
+
+        await Task.WhenAll(tasks);
+
+        return await firstCompletedTask;
     }
 
     /// <summary>
@@ -105,7 +115,7 @@ public static class CommandExtensions
     /// </typeparam>
     /// <param name="command">The command to be executed.</param>
     /// <param name="serviceProvider">The service provider.</param>
-    /// <exception cref="InvalidOperationException" />
+    /// <exception cref="ArgumentNullException" />
     public static void Execute<TResult>(
         this ICommand<TResult> command,
         IServiceProvider serviceProvider)

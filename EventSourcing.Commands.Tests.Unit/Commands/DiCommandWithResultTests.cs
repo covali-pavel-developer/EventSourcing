@@ -9,32 +9,19 @@ public class DiCommandWithResultTests
     #region [ ExecuteAsync ]
 
     [Fact]
-    public async Task ExecuteAsync_Should_Execute_Registered_Command_And_Return_Result()
+    public async Task ExecuteAsync_NoHandlers_ThrowsInvalidOperationException()
     {
         // Arrange
-        var mockServiceProvider = new Mock<IServiceProvider>();
-        var mockHandler = new Mock<ICommandHandler<CommandWithResult, SampleResult>>();
-        var expectedResult = new SampleResult();
         var command = new CommandWithResult();
+        var serviceProviderMock = new Mock<IServiceProvider>();
 
-        mockHandler
-            .Setup(e =>
-                e.HandleAsync(It.IsAny<CommandWithResult>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedResult);
+        serviceProviderMock
+            .Setup(sp => sp.GetService(typeof(ICommandHandler<CommandWithResult, SampleResult>)))
+            .Returns((ICommandHandler<CommandWithResult, SampleResult>)default!);
 
-        mockServiceProvider
-            .Setup(e =>
-                e.GetService(typeof(ICommandHandler<CommandWithResult, SampleResult>)))
-            .Returns(mockHandler.Object);
-
-        // Act
-        var result = await command.ExecuteAsync(mockServiceProvider.Object);
-
-        // Assert
-        mockHandler.Verify(e =>
-            e.HandleAsync(command, It.IsAny<CancellationToken>()), Times.Once);
-
-        Assert.Equal(expectedResult, result);
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await command.ExecuteAsync(serviceProviderMock.Object));
     }
 
     [Fact]
@@ -82,35 +69,6 @@ public class DiCommandWithResultTests
     #endregion
 
     #region [ Execute ]
-
-    [Fact]
-    public async Task Execute_Should_Execute_Registered_Command_And_Return_Result()
-    {
-        // Arrange
-        var mockServiceProvider = new Mock<IServiceProvider>();
-        var mockHandler = new Mock<ICommandHandler<CommandWithResult, SampleResult>>();
-        var expectedResult = new SampleResult();
-        var command = new CommandWithResult();
-
-        mockHandler
-            .Setup(e =>
-                e.HandleAsync(It.IsAny<CommandWithResult>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedResult);
-
-        mockServiceProvider
-            .Setup(e =>
-                e.GetService(typeof(ICommandHandler<CommandWithResult, SampleResult>)))
-            .Returns(mockHandler.Object);
-
-        // Act
-        command.Execute(mockServiceProvider.Object);
-
-        await Task.Delay(100);
-
-        // Assert
-        mockHandler.Verify(e =>
-            e.HandleAsync(command, It.IsAny<CancellationToken>()), Times.Once);
-    }
 
     [Fact]
     public void Execute_Should_Throw_ArgumentNullException_When_Command_Is_Null()

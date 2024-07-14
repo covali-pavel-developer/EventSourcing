@@ -18,8 +18,7 @@ public class ConcurrentCommandBus : IConcurrentCommandBus
 
     /// <inheritdoc />
     public void Subscribe<TCommand, TResult>(
-        IConcurrentCommandHandler<TCommand, TResult> handler
-    )
+        IConcurrentCommandHandler<TCommand, TResult> handler)
         where TCommand : IConcurrentCommand<TResult>
     {
         ArgumentNullException.ThrowIfNull(handler);
@@ -82,7 +81,7 @@ public class ConcurrentCommandBus : IConcurrentCommandBus
         if (concurrentCount <= 0) concurrentCount = 1;
 
         var concurrentHandler = _handlers
-            .GetOrAdd(type.Name, _ => new ConcurrentHandler(
+            .GetOrAdd((string)handler.GetType().Name, _ => new ConcurrentHandler(
                 handler,
                 new SemaphoreSlim(concurrentCount, concurrentCount)
             ));

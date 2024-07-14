@@ -54,7 +54,6 @@ public interface ICommandBus
     /// </typeparam>
     /// <param name="command">The command to be executed.</param>
     /// <exception cref="ArgumentNullException" />
-    /// <exception cref="InvalidOperationException" />
     void Execute<TCommand>(TCommand command) where TCommand : ICommand;
 
     /// <summary>
@@ -86,7 +85,6 @@ public interface ICommandBus
     /// </typeparam>
     /// <param name="command">The command to be executed.</param>
     /// <exception cref="ArgumentNullException" />
-    /// <exception cref="InvalidOperationException" />
     void Execute<TCommand, TResult>(
         TCommand command
     ) where TCommand : ICommand<TResult>;

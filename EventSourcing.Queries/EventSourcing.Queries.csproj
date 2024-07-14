@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<Title>EventSourcing.Commands</Title>
-		<PackageId>EventSourcing.Commands</PackageId>
-		<PackageProjectUrl>https://www.nuget.org/packages/EventSourcing.Commands</PackageProjectUrl>
+		<Title>EventSourcing.Queries</Title>
+		<PackageId>EventSourcing.Queries</PackageId>
+		<PackageProjectUrl>https://www.nuget.org/packages/EventSourcing.Queries</PackageProjectUrl>
 	</PropertyGroup>
 
 	<ItemGroup>

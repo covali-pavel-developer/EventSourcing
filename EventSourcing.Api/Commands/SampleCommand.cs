@@ -17,3 +17,16 @@ public sealed class SampleCommandHandler(
         return Task.FromResult(new BaseResult(command.Number, message));
     }
 }
+
+public sealed class AnotherSampleCommandHandler(
+    ILogger<SampleCommandHandler> logger
+)
+    : ICommandHandler<SampleCommand, BaseResult>
+{
+    public Task<BaseResult> HandleAsync(SampleCommand command, CancellationToken ct = default)
+    {
+        var message = $"{nameof(AnotherSampleCommandHandler)} with number: {command.Number} handled at {DateTime.Now:HH:mm:ss.fff}";
+        logger.LogInformation(message);
+        return Task.FromResult(new BaseResult(command.Number, message));
+    }
+}
