@@ -17,7 +17,6 @@ namespace EventSourcing.Extensions;
 /// </summary>
 public static class EventSourcingExtensions
 {
-    internal static IServiceProvider ServiceProvider = default!;
     internal static readonly ConcurrentCommandBus ConcurrentCommandBus = new();
 
     /// <summary>
@@ -51,18 +50,19 @@ public static class EventSourcingExtensions
         ServiceLifetime lifetime,
         params Type[] types)
     {
-        var logger = services
+        EventSourcingFactory.Provider = services.BuildServiceProvider();
+
+        EventSourcingFactory.Logger = services
             .BuildServiceProvider()
             .GetRequiredService<ILoggerFactory>()
             .CreateLogger(nameof(EventSourcing));
 
-        var loggerEnabled = logger.IsEnabled(LogLevel.Debug);
+        var loggerEnabled = EventSourcingFactory.Logger.IsEnabled(LogLevel.Debug);
         var sw = new Stopwatch();
+        if (loggerEnabled) EventSourcingFactory.Logger
+            .LogDebug("Starting to register handlers.");
 
         sw.Start();
-
-        if (loggerEnabled) logger.LogDebug("Starting to register handlers.");
-
         var handlersTypes = types
             .Select(t => t.Assembly)
             .Distinct()
@@ -73,18 +73,17 @@ public static class EventSourcingExtensions
             .Where(t => t.ServiceType.IsGenericType)
             .ToList();
 
-        var counter = services.AddCommandHandlers(handlersTypes, logger);
-        counter += services.AddConcurrentCommandHandlers(handlersTypes, logger);
-        counter += services.AddEventHandlers(handlersTypes, logger);
-        counter += services.AddQueryHandlers(handlersTypes, logger);
-
-        ServiceProvider = services.BuildServiceProvider();
-
+        var counter = services.AddCommandHandlers(handlersTypes);
+        counter += services.AddConcurrentCommandHandlers(handlersTypes);
+        counter += services.AddEventHandlers(handlersTypes);
+        counter += services.AddQueryHandlers(handlersTypes);
         sw.Stop();
 
-        if (loggerEnabled)
-            logger.LogDebug("Finished to register {Count} handlers in {ElapsedMilliseconds} ms.",
+        if (loggerEnabled) EventSourcingFactory.Logger
+            .LogDebug("Finished to register {Count} handlers in {ElapsedMilliseconds} ms.",
                 counter, sw.ElapsedMilliseconds);
+
+        EventSourcingFactory.Provider = services.BuildServiceProvider();
 
         return services;
     }
@@ -266,69 +265,6 @@ public static class EventSourcingExtensions
         return services;
     }
 
-    /// <summary>
-    ///     Executes the specified task with a stopwatch.
-    /// </summary>
-    /// <typeparam name="TResult">The type of the result produced by the task.</typeparam>
-    /// <param name="type">The type associated with the task.</param>
-    /// <param name="task">The task to be executed.</param>
-    public static async Task<TResult> WithWatcher<TResult>(this Task<TResult> task, Type type)
-    {
-        var logger = ServiceProvider
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger(type);
-
-        Stopwatch? sw = null;
-
-        if (logger.IsEnabled(LogLevel.Debug))
-        {
-            sw = new Stopwatch();
-            logger.LogDebug("{Operation} started execution.", type.Name);
-            sw.Start();
-        }
-
-        var result = await task;
-
-        if (!logger.IsEnabled(LogLevel.Debug)) return result;
-
-        sw!.Stop();
-
-        logger.LogDebug("{Operation} finished execution in {ElapsedMilliseconds} ms.",
-            type.Name, sw.ElapsedMilliseconds);
-
-        return result;
-    }
-
-    /// <summary>
-    ///     Executes the specified task with a stopwatch.
-    /// </summary>
-    /// <param name="type">The type associated with the task.</param>
-    /// <param name="task">The task to be executed.</param>
-    public static async Task WithWatcher(this Task task, Type type)
-    {
-        var logger = ServiceProvider
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger(type);
-
-        Stopwatch? sw = null;
-
-        if (logger.IsEnabled(LogLevel.Debug))
-        {
-            sw = new Stopwatch();
-            logger.LogDebug("{Operation} started execution.", type.Name);
-            sw.Start();
-        }
-
-        await task;
-
-        if (!logger.IsEnabled(LogLevel.Debug)) return;
-
-        sw!.Stop();
-
-        logger.LogDebug("{Operation} finished execution in {ElapsedMilliseconds} ms.",
-            type.Name, sw.ElapsedMilliseconds);
-    }
-
     #region [ Commands ]
 
     /// <summary>
@@ -385,10 +321,7 @@ public static class EventSourcingExtensions
         CancellationToken ct = default) where TCommand : ICommand
     {
         ArgumentNullException.ThrowIfNull(command);
-
-        await command
-            .ExecuteAsync(ServiceProvider, ct)
-            .WithWatcher(command.GetType());
+        await command.ExecuteAsync(EventSourcingFactory.Provider, ct);
     }
 
     /// <summary>
@@ -420,10 +353,7 @@ public static class EventSourcingExtensions
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-
-        return await command
-            .ExecuteAsync(ServiceProvider, ct)
-            .WithWatcher(command.GetType());
+        return await command.ExecuteAsync(EventSourcingFactory.Provider, ct);
     }
 
     /// <summary>
@@ -455,7 +385,7 @@ public static class EventSourcingExtensions
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        return await ExecuteAsync(command, ServiceProvider, ct);
+        return await ExecuteAsync(command, EventSourcingFactory.Provider, ct);
     }
 
     /// <summary>
@@ -491,10 +421,8 @@ public static class EventSourcingExtensions
                 $"Handler for concurrent command type {type.Name} not registered.");
 
         var tasks = handlers
-            .Select(handler => (Task<TResult>)
-                WithWatcher(command.GetType(),
-                    ConcurrentCommandBus.ExecuteAsync(type, command, handler, ct))
-            )
+            .Select(handler => (Task<TResult>)ConcurrentCommandBus
+                .ExecuteAsync(type, command, handler, ct))
             .ToList();
 
         var firstCompletedTask = await Task.WhenAny(tasks);
@@ -571,15 +499,11 @@ public static class EventSourcingExtensions
         ServiceLifetime lifetime,
         params Type[] types)
     {
-        services.AddGenericTypes(
+        return services.AddGenericTypes(
             types.Select(t => t.Assembly),
             lifetime,
             typeof(IEventHandler<>)
         );
-
-        ServiceProvider = services.BuildServiceProvider();
-
-        return services;
     }
 
     /// <summary>
@@ -592,10 +516,7 @@ public static class EventSourcingExtensions
     public static async Task PublishAsync<TEvent>(this TEvent eventModel) where TEvent : IEvent
     {
         ArgumentNullException.ThrowIfNull(eventModel);
-
-        await eventModel
-            .PublishAsync(ServiceProvider)
-            .WithWatcher(eventModel.GetType());
+        await eventModel.PublishAsync(EventSourcingFactory.Provider);
     }
 
     /// <summary>
@@ -667,10 +588,7 @@ public static class EventSourcingExtensions
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-
-        return await query
-            .ExecuteAsync(ServiceProvider, ct)
-            .WithWatcher(query.GetType());
+        return await query.ExecuteAsync(EventSourcingFactory.Provider, ct);
     }
 
     #endregion
