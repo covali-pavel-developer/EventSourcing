@@ -266,6 +266,69 @@ public static class EventSourcingExtensions
         return services;
     }
 
+    /// <summary>
+    ///     Executes the specified task with a stopwatch.
+    /// </summary>
+    /// <typeparam name="TResult">The type of the result produced by the task.</typeparam>
+    /// <param name="type">The type associated with the task.</param>
+    /// <param name="task">The task to be executed.</param>
+    public static async Task<TResult> WithWatcher<TResult>(this Task<TResult> task, Type type)
+    {
+        var logger = ServiceProvider
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger(type);
+
+        Stopwatch? sw = null;
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            sw = new Stopwatch();
+            logger.LogDebug("{Operation} started execution.", type.Name);
+            sw.Start();
+        }
+
+        var result = await task;
+
+        if (!logger.IsEnabled(LogLevel.Debug)) return result;
+
+        sw!.Stop();
+
+        logger.LogDebug("{Operation} finished execution in {ElapsedMilliseconds} ms.",
+            type.Name, sw.ElapsedMilliseconds);
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Executes the specified task with a stopwatch.
+    /// </summary>
+    /// <param name="type">The type associated with the task.</param>
+    /// <param name="task">The task to be executed.</param>
+    public static async Task WithWatcher(this Task task, Type type)
+    {
+        var logger = ServiceProvider
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger(type);
+
+        Stopwatch? sw = null;
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            sw = new Stopwatch();
+            logger.LogDebug("{Operation} started execution.", type.Name);
+            sw.Start();
+        }
+
+        await task;
+
+        if (!logger.IsEnabled(LogLevel.Debug)) return;
+
+        sw!.Stop();
+
+        logger.LogDebug("{Operation} finished execution in {ElapsedMilliseconds} ms.",
+            type.Name, sw.ElapsedMilliseconds);
+    }
+
     #region [ Commands ]
 
     /// <summary>
@@ -322,7 +385,10 @@ public static class EventSourcingExtensions
         CancellationToken ct = default) where TCommand : ICommand
     {
         ArgumentNullException.ThrowIfNull(command);
-        await command.ExecuteAsync(ServiceProvider, ct);
+
+        await command
+            .ExecuteAsync(ServiceProvider, ct)
+            .WithWatcher(command.GetType());
     }
 
     /// <summary>
@@ -354,7 +420,10 @@ public static class EventSourcingExtensions
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        return await command.ExecuteAsync(ServiceProvider, ct);
+
+        return await command
+            .ExecuteAsync(ServiceProvider, ct)
+            .WithWatcher(command.GetType());
     }
 
     /// <summary>
@@ -422,8 +491,10 @@ public static class EventSourcingExtensions
                 $"Handler for concurrent command type {type.Name} not registered.");
 
         var tasks = handlers
-            .Select(handler => (Task<TResult>)ConcurrentCommandBus
-                .ExecuteAsync(type, command, handler, ct))
+            .Select(handler => (Task<TResult>)
+                WithWatcher(command.GetType(),
+                    ConcurrentCommandBus.ExecuteAsync(type, command, handler, ct))
+            )
             .ToList();
 
         var firstCompletedTask = await Task.WhenAny(tasks);
@@ -521,7 +592,10 @@ public static class EventSourcingExtensions
     public static async Task PublishAsync<TEvent>(this TEvent eventModel) where TEvent : IEvent
     {
         ArgumentNullException.ThrowIfNull(eventModel);
-        await eventModel.PublishAsync(ServiceProvider);
+
+        await eventModel
+            .PublishAsync(ServiceProvider)
+            .WithWatcher(eventModel.GetType());
     }
 
     /// <summary>
@@ -593,7 +667,10 @@ public static class EventSourcingExtensions
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-        return await query.ExecuteAsync(ServiceProvider, ct);
+
+        return await query
+            .ExecuteAsync(ServiceProvider, ct)
+            .WithWatcher(query.GetType());
     }
 
     #endregion
