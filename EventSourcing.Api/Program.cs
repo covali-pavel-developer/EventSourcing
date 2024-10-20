@@ -68,7 +68,12 @@ app.MapGet("/commands/concurrent/execute", (int number, int count) =>
 
 app.MapGet("/events/publish-async", async (int number) =>
     {
-        await new SampleEvent(number).PublishAsync();
+        await new SampleEvent(number)
+            .PublishAsync()
+            .WithWatcher(
+            nameof(SampleEvent),
+            LogLevel.Information
+        );
     })
     .WithName("PublishEventAsync")
     .WithOpenApi();
@@ -81,7 +86,10 @@ app.MapGet("/queries/execute-async", async (int number) =>
     {
         return await new SampleQuery(number)
             .ExecuteAsync()
-            .WithWatcher(nameof(SampleQuery), LogLevel.Information);
+            .WithWatcher(
+                nameof(SampleQuery),
+                LogLevel.Information
+            );
     })
     .WithName("ExecuteQueryAsync")
     .WithOpenApi();

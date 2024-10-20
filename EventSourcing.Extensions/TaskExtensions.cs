@@ -15,7 +15,7 @@ public static class TaskExtensions
     )
     {
         var logger = EventSourcingContext.Logger;
-        if (logger?.IsEnabled(logLevel) != true)
+        if (!logger.IsEnabled(logLevel))
         {
             return await task;
         }
@@ -54,7 +54,7 @@ public static class TaskExtensions
     )
     {
         var logger = EventSourcingContext.Logger;
-        if (logger?.IsEnabled(logLevel) != true)
+        if (!logger.IsEnabled(logLevel))
         {
             await task;
             return;
