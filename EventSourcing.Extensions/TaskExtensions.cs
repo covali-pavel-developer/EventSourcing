@@ -8,13 +8,45 @@ public static class TaskExtensions
     /// <summary>
     ///     Executes the specified task with a stopwatch.
     /// </summary>
+    public static async Task WithWatcher(
+        this Task task,
+        string operation,
+        LogLevel logLevel = LogLevel.Debug
+    )
+    {
+        await task.WithWatcher(
+            EventSourcingContext.Logger,
+            operation,
+            logLevel
+        );
+    }
+    
+    /// <summary>
+    ///     Executes the specified task with a stopwatch.
+    /// </summary>
     public static async Task<TResult> WithWatcher<TResult>(
         this Task<TResult> task,
         string operation,
         LogLevel logLevel = LogLevel.Debug
     )
     {
-        var logger = EventSourcingContext.Logger;
+        return await task.WithWatcher(
+            EventSourcingContext.Logger,
+            operation,
+            logLevel
+        );
+    }
+    
+    /// <summary>
+    ///     Executes the specified task with a stopwatch.
+    /// </summary>
+    public static async Task<TResult> WithWatcher<TResult>(
+        this Task<TResult> task,
+        ILogger logger,
+        string operation,
+        LogLevel logLevel = LogLevel.Debug
+    )
+    {
         if (!logger.IsEnabled(logLevel))
         {
             return await task;
@@ -49,11 +81,11 @@ public static class TaskExtensions
     /// </summary>
     public static async Task WithWatcher(
         this Task task,
+        ILogger logger,
         string operation,
         LogLevel logLevel = LogLevel.Debug
     )
     {
-        var logger = EventSourcingContext.Logger;
         if (!logger.IsEnabled(logLevel))
         {
             await task;

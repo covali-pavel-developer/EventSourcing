@@ -71,9 +71,9 @@ app.MapGet("/events/publish-async", async (int number) =>
         await new SampleEvent(number)
             .PublishAsync()
             .WithWatcher(
-            nameof(SampleEvent),
-            LogLevel.Information
-        );
+                nameof(SampleEvent),
+                LogLevel.Information
+            );
     })
     .WithName("PublishEventAsync")
     .WithOpenApi();
