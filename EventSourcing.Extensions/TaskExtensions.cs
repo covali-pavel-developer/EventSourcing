@@ -8,41 +8,38 @@ public static class TaskExtensions
     /// <summary>
     ///     Executes the specified task with a stopwatch.
     /// </summary>
-    /// <typeparam name="TResult">The type of the result produced by the task.</typeparam>
-    /// <param name="type">The type associated with the task.</param>
-    /// <param name="task">The task to be executed.</param>
-    public static async Task<TResult> WithWatcher<TResult>(this Task<TResult> task, Type type)
+    public static async Task<TResult> WithWatcher<TResult>(
+        this Task<TResult> task,
+        string operation,
+        LogLevel logLevel = LogLevel.Debug
+    )
     {
-        return await WithWatcher(task, type.Name);
-    }
-
-    public static async Task<TResult> WithWatcher<TResult, TSource>(this Task<TResult> task)
-    {
-        return await WithWatcher(task, typeof(TSource).Name);
-    }
-
-    /// <summary>
-    ///     Executes the specified task with a stopwatch.
-    /// </summary>
-    /// <typeparam name="TResult">The type of the result produced by the task.</typeparam>
-    /// <param name="type">The type associated with the task.</param>
-    /// <param name="task">The task to be executed.</param>
-    public static async Task<TResult> WithWatcher<TResult>(this Task<TResult> task, string name)
-    {
-        if (!EventSourcingFactory.Logger
-                .IsEnabled(LogLevel.Debug))
+        var logger = EventSourcingContext.Logger;
+        if (logger?.IsEnabled(logLevel) != true)
+        {
             return await task;
+        }
 
         var sw = new Stopwatch();
-        EventSourcingFactory.Logger.LogDebug("{Operation} started execution.", name);
+
+        logger.Log(
+            logLevel,
+            "{Operation} started execution.",
+            operation
+        );
+
         sw.Start();
 
         var result = await task;
 
         sw.Stop();
 
-        EventSourcingFactory.Logger.LogDebug("{Operation} finished execution in {ElapsedMilliseconds} ms.",
-            name, sw.ElapsedMilliseconds);
+        logger.Log(
+            logLevel,
+            "{Operation} finished execution in {ElapsedMilliseconds} ms.",
+            operation,
+            sw.ElapsedMilliseconds
+        );
 
         return result;
     }
@@ -50,11 +47,14 @@ public static class TaskExtensions
     /// <summary>
     ///     Executes the specified task with a stopwatch.
     /// </summary>
-    /// <param name="type">The type associated with the task.</param>
-    /// <param name="task">The task to be executed.</param>
-    public static async Task WithWatcher(this Task task, Type type)
+    public static async Task WithWatcher(
+        this Task task,
+        string operation,
+        LogLevel logLevel = LogLevel.Debug
+    )
     {
-        if (!EventSourcingFactory.Logger.IsEnabled(LogLevel.Debug))
+        var logger = EventSourcingContext.Logger;
+        if (logger?.IsEnabled(logLevel) != true)
         {
             await task;
             return;
@@ -62,17 +62,21 @@ public static class TaskExtensions
 
         var sw = new Stopwatch();
 
-        EventSourcingFactory.Logger.LogDebug(
-            "{Operation} started execution.", type.Name
+        logger.Log(
+            logLevel,
+            "{Operation} started execution.",
+            operation
         );
 
         sw.Start();
         await task;
         sw.Stop();
 
-        EventSourcingFactory.Logger.LogDebug(
+        logger.Log(
+            logLevel,
             "{Operation} finished execution in {ElapsedMilliseconds} ms.",
-            type.Name, sw.ElapsedMilliseconds
+            operation,
+            sw.ElapsedMilliseconds
         );
     }
 }
