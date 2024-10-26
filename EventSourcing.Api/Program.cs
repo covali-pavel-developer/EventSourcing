@@ -79,7 +79,9 @@ app.MapGet("/events/publish-async", async (int number) =>
 
 app.MapGet("/queries/execute-async", async (int number) =>
     {
-        return await new SampleQuery(number).ExecuteAsync();
+        return await new SampleQuery(number)
+            .ExecuteAsync()
+            .WithWatcher(nameof(SampleQuery), LogLevel.Information);
     })
     .WithName("ExecuteQueryAsync")
     .WithOpenApi();

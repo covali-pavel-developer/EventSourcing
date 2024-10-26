@@ -8,6 +8,7 @@ using EventSourcing.Events.Extensions;
 using EventSourcing.Queries;
 using EventSourcing.Queries.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace EventSourcing.Extensions;
@@ -17,7 +18,6 @@ namespace EventSourcing.Extensions;
 /// </summary>
 public static class EventSourcingExtensions
 {
-    internal static IServiceProvider ServiceProvider = default!;
     internal static readonly ConcurrentCommandBus ConcurrentCommandBus = new();
 
     /// <summary>
@@ -32,16 +32,52 @@ public static class EventSourcingExtensions
     /// </param>
     public static IServiceCollection AddEventSourcing(
         this IServiceCollection services,
-        params Type[] types)
+        params Type[] types
+    )
     {
         return AddEventSourcing(services, ServiceLifetime.Transient, types);
     }
 
     /// <summary>
-    ///     Register handlers in the dependency injection container.
+    ///     Configures the application to use Event Sourcing by setting the
+    ///     application's <see cref="IServiceScopeFactory" /> after the
+    ///     final build of the service provider.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection" /> to configure.</param>
+    /// <returns>The same <see cref="IServiceCollection" /> for further configuration.</returns>
+    public static IServiceCollection UseEventSourcing(this IServiceCollection services)
+    {
+        EventSourcingContext.SetScopeFactory(
+            services
+                .BuildServiceProvider()
+                .GetRequiredService<IServiceScopeFactory>()
+        );
+
+        return services;
+    }
+
+    /// <summary>
+    ///     Configures the application to use Event Sourcing by setting the
+    ///     application's <see cref="IServiceScopeFactory" /> from the existing
+    ///     service provider.
+    /// </summary>
+    /// <param name="serviceProvider">The <see cref="IServiceProvider" /> to configure.</param>
+    /// <returns>The same <see cref="IServiceProvider" /> for further configuration.</returns>
+    public static IServiceProvider UseEventSourcing(this IServiceProvider serviceProvider)
+    {
+        EventSourcingContext.SetScopeFactory(
+            serviceProvider.GetRequiredService<IServiceScopeFactory>()
+        );
+
+        return serviceProvider;
+    }
+
+    /// <summary>
+    ///     Registers the Event Sourcing services and sets the ScopeFactory
+    ///     for the application's service provider.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection" /> to which the handlers will be added.</param>
-    /// <param name="lifetime">The lifetime.</param>
+    /// <param name="lifetime">The lifetime of the services.</param>
     /// <param name="types">
     ///     An array of <see cref="Type" /> objects representing the types from whose
     ///     assemblies the handlers will be registered.
@@ -49,19 +85,23 @@ public static class EventSourcingExtensions
     public static IServiceCollection AddEventSourcing(
         this IServiceCollection services,
         ServiceLifetime lifetime,
-        params Type[] types)
+        params Type[] types
+    )
     {
-        var logger = services
-            .BuildServiceProvider()
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger(nameof(EventSourcing));
+        services.AddSingleton<IEventBus, EventBus>();
+        services.AddSingleton<ICommandBus, CommandBus>();
+        services.UseEventSourcing();
 
+        var logger = EventSourcingContext.Logger;
         var loggerEnabled = logger.IsEnabled(LogLevel.Debug);
         var sw = new Stopwatch();
 
         sw.Start();
 
-        if (loggerEnabled) logger.LogDebug("Starting to register handlers.");
+        if (loggerEnabled)
+        {
+            logger.LogDebug("Starting to register handlers.");
+        }
 
         var handlersTypes = types
             .Select(t => t.Assembly)
@@ -73,19 +113,19 @@ public static class EventSourcingExtensions
             .Where(t => t.ServiceType.IsGenericType)
             .ToList();
 
-        var counter = services.AddCommandHandlers(handlersTypes, logger);
-        counter += services.AddConcurrentCommandHandlers(handlersTypes, logger);
-        counter += services.AddEventHandlers(handlersTypes, logger);
-        counter += services.AddQueryHandlers(handlersTypes, logger);
-
-        ServiceProvider = services.BuildServiceProvider();
+        var counter = services.AddCommandHandlers(handlersTypes);
+        counter += services.AddConcurrentCommandHandlers(handlersTypes);
+        counter += services.AddEventHandlers(handlersTypes);
+        counter += services.AddQueryHandlers(handlersTypes);
 
         sw.Stop();
 
         if (loggerEnabled)
+        {
             logger.LogDebug("Finished to register {Count} handlers in {ElapsedMilliseconds} ms.",
                 counter, sw.ElapsedMilliseconds);
-
+        }
+        
         return services;
     }
 
@@ -98,14 +138,14 @@ public static class EventSourcingExtensions
     ///     A collection of <see cref="ServiceDescriptor" />
     ///     representing the handler services to be added.
     /// </param>
-    /// <param name="logger">An optional <see cref="ILogger" /> instance for logging debug information.</param>
     /// <returns>The number of command handlers registered.</returns>
     public static int AddCommandHandlers(
         this IServiceCollection services,
-        IEnumerable<ServiceDescriptor> handlerServices,
-        ILogger? logger = null)
+        IEnumerable<ServiceDescriptor> handlerServices
+    )
     {
-        var loggerEnabled = logger != null && logger.IsEnabled(LogLevel.Debug);
+        var logger = EventSourcingContext.Logger;
+        var loggerEnabled = logger.IsEnabled(LogLevel.Debug);
         var genericTypes = new List<Type>
         {
             typeof(ICommandHandler<>),
@@ -120,10 +160,13 @@ public static class EventSourcingExtensions
         for (var index = 0; index < handlers.Count; index++)
         {
             var handler = handlers[index];
-            services.Add(handler);
+            services.TryAdd(handler);
+
             if (loggerEnabled)
-                logger!.LogDebug("Registered command handler[{Count}]: {HandlerName}",
+            {
+                logger.LogDebug("Registered command handler[{Count}]: {HandlerName}",
                     index, handler.ImplementationType?.FullName);
+            }
         }
 
         return handlers.Count;
@@ -138,14 +181,14 @@ public static class EventSourcingExtensions
     ///     A collection of <see cref="ServiceDescriptor" />
     ///     representing the handler services to be added.
     /// </param>
-    /// <param name="logger">An optional <see cref="ILogger" /> instance for logging debug information.</param>
     /// <returns>The number of concurrent command handlers registered.</returns>
     public static int AddConcurrentCommandHandlers(
         this IServiceCollection services,
-        IEnumerable<ServiceDescriptor> handlerServices,
-        ILogger? logger = null)
+        IEnumerable<ServiceDescriptor> handlerServices
+    )
     {
-        var loggerEnabled = logger != null && logger.IsEnabled(LogLevel.Debug);
+        var logger = EventSourcingContext.Logger;
+        var loggerEnabled = logger.IsEnabled(LogLevel.Debug);
         var genericTypes = new List<Type>
         {
             typeof(IConcurrentCommandHandler<,>)
@@ -159,9 +202,9 @@ public static class EventSourcingExtensions
         for (var index = 0; index < handlers.Count; index++)
         {
             var handler = handlers[index];
-            services.Add(handler);
+            services.TryAdd(handler);
             if (loggerEnabled)
-                logger!.LogDebug("Registered concurrent command handler[{Count}]: {HandlerName}",
+                logger.LogDebug("Registered concurrent command handler[{Count}]: {HandlerName}",
                     index, handler.ImplementationType?.FullName);
         }
 
@@ -177,14 +220,14 @@ public static class EventSourcingExtensions
     ///     A collection of <see cref="ServiceDescriptor" />
     ///     representing the handler services to be added.
     /// </param>
-    /// <param name="logger">An optional <see cref="ILogger" /> instance for logging debug information.</param>
     /// <returns>The number of event handlers registered.</returns>
     public static int AddEventHandlers(
         this IServiceCollection services,
-        IEnumerable<ServiceDescriptor> handlerServices,
-        ILogger? logger = null)
+        IEnumerable<ServiceDescriptor> handlerServices
+    )
     {
-        var loggerEnabled = logger != null && logger.IsEnabled(LogLevel.Debug);
+        var logger = EventSourcingContext.Logger;
+        var loggerEnabled = logger.IsEnabled(LogLevel.Debug);
         var genericType = typeof(IEventHandler<>);
         var handlers = handlerServices
             .Where(t => genericType == t.ServiceType.GetGenericTypeDefinition())
@@ -193,9 +236,9 @@ public static class EventSourcingExtensions
         for (var index = 0; index < handlers.Count; index++)
         {
             var handler = handlers[index];
-            services.Add(handler);
+            services.TryAdd(handler);
             if (loggerEnabled)
-                logger!.LogDebug("Registered event handler[{Count}]: {HandlerName}",
+                logger.LogDebug("Registered event handler[{Count}]: {HandlerName}",
                     index, handler.ImplementationType?.FullName);
         }
 
@@ -211,14 +254,14 @@ public static class EventSourcingExtensions
     ///     A collection of <see cref="ServiceDescriptor" />
     ///     representing the handler services to be added.
     /// </param>
-    /// <param name="logger">An optional <see cref="ILogger" /> instance for logging debug information.</param>
     /// <returns>The number of query handlers registered.</returns>
     public static int AddQueryHandlers(
         this IServiceCollection services,
-        IEnumerable<ServiceDescriptor> handlerServices,
-        ILogger? logger = null)
+        IEnumerable<ServiceDescriptor> handlerServices
+    )
     {
-        var loggerEnabled = logger != null && logger.IsEnabled(LogLevel.Debug);
+        var logger = EventSourcingContext.Logger;
+        var loggerEnabled = logger.IsEnabled(LogLevel.Debug);
         var genericTypes = new List<Type>
         {
             typeof(IQueryHandler<,>)
@@ -232,10 +275,16 @@ public static class EventSourcingExtensions
         for (var index = 0; index < handlers.Count; index++)
         {
             var handler = handlers[index];
-            services.Add(handler);
+            services.TryAdd(handler);
+            
             if (loggerEnabled)
-                logger!.LogDebug("Registered query handler[{Count}]: {HandlerName}",
-                    index, handler.ImplementationType?.FullName);
+            {
+                logger.LogDebug(
+                    "Registered query handler[{Count}]: {HandlerName}",
+                    index, 
+                    handler.ImplementationType?.FullName
+                );
+            }
         }
 
         return handlers.Count;
@@ -248,7 +297,8 @@ public static class EventSourcingExtensions
         this IServiceCollection services,
         IEnumerable<Assembly> assembliesSource,
         ServiceLifetime lifetime,
-        params Type[] genericTypes)
+        params Type[] genericTypes
+    )
     {
         var handlers = assembliesSource
             .Distinct()
@@ -261,7 +311,9 @@ public static class EventSourcingExtensions
                 x => x == t.ServiceType.GetGenericTypeDefinition()));
 
         foreach (var handler in handlers)
-            services.Add(handler);
+        {
+            services.TryAdd(handler);
+        }
 
         return services;
     }
@@ -278,7 +330,8 @@ public static class EventSourcingExtensions
     /// </param>
     public static IServiceCollection AddCommandHandlers(
         this IServiceCollection services,
-        params Type[] types)
+        params Type[] types
+    )
     {
         return AddCommandHandlers(services, ServiceLifetime.Transient, types);
     }
@@ -295,7 +348,8 @@ public static class EventSourcingExtensions
     public static IServiceCollection AddCommandHandlers(
         this IServiceCollection services,
         ServiceLifetime lifetime,
-        params Type[] types)
+        params Type[] types
+    )
     {
         services.AddGenericTypes(
             types.Select(t => t.Assembly),
@@ -319,10 +373,11 @@ public static class EventSourcingExtensions
     /// <exception cref="InvalidOperationException" />
     public static async Task ExecuteAsync<TCommand>(
         this TCommand command,
-        CancellationToken ct = default) where TCommand : ICommand
+        CancellationToken ct = default
+    ) where TCommand : ICommand
     {
         ArgumentNullException.ThrowIfNull(command);
-        await command.ExecuteAsync(ServiceProvider, ct);
+        await command.ExecuteAsync(EventSourcingContext.ServiceProvider, ct);
     }
 
     /// <summary>
@@ -351,10 +406,11 @@ public static class EventSourcingExtensions
     /// <exception cref="InvalidOperationException" />
     public static async Task<TResult> ExecuteAsync<TResult>(
         this ICommand<TResult> command,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(command);
-        return await command.ExecuteAsync(ServiceProvider, ct);
+        return await command.ExecuteAsync(EventSourcingContext.ServiceProvider, ct);
     }
 
     /// <summary>
@@ -383,10 +439,11 @@ public static class EventSourcingExtensions
     /// <exception cref="InvalidOperationException" />
     public static async Task<TResult> ExecuteAsync<TResult>(
         this IConcurrentCommand<TResult> command,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(command);
-        return await ExecuteAsync(command, ServiceProvider, ct);
+        return await ExecuteAsync(command, EventSourcingContext.ServiceProvider, ct);
     }
 
     /// <summary>
@@ -403,7 +460,8 @@ public static class EventSourcingExtensions
     public static async Task<TResult> ExecuteAsync<TResult>(
         this IConcurrentCommand<TResult> command,
         IServiceProvider serviceProvider,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -418,8 +476,10 @@ public static class EventSourcingExtensions
             .ToList()!;
 
         if (handlers.Count == 0)
+        {
             throw new InvalidOperationException(
                 $"Handler for concurrent command type {type.Name} not registered.");
+        }
 
         var tasks = handlers
             .Select(handler => (Task<TResult>)ConcurrentCommandBus
@@ -458,7 +518,8 @@ public static class EventSourcingExtensions
     /// <exception cref="ArgumentNullException" />
     public static void Execute<TResult>(
         this IConcurrentCommand<TResult> command,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider
+    )
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -481,7 +542,8 @@ public static class EventSourcingExtensions
     /// </param>
     public static IServiceCollection AddEventHandlers(
         this IServiceCollection services,
-        params Type[] types)
+        params Type[] types
+    )
     {
         return AddEventHandlers(services, ServiceLifetime.Transient, types);
     }
@@ -498,15 +560,14 @@ public static class EventSourcingExtensions
     public static IServiceCollection AddEventHandlers(
         this IServiceCollection services,
         ServiceLifetime lifetime,
-        params Type[] types)
+        params Type[] types
+    )
     {
         services.AddGenericTypes(
             types.Select(t => t.Assembly),
             lifetime,
             typeof(IEventHandler<>)
         );
-
-        ServiceProvider = services.BuildServiceProvider();
 
         return services;
     }
@@ -521,7 +582,7 @@ public static class EventSourcingExtensions
     public static async Task PublishAsync<TEvent>(this TEvent eventModel) where TEvent : IEvent
     {
         ArgumentNullException.ThrowIfNull(eventModel);
-        await eventModel.PublishAsync(ServiceProvider);
+        await eventModel.PublishAsync(EventSourcingContext.ServiceProvider);
     }
 
     /// <summary>
@@ -550,7 +611,8 @@ public static class EventSourcingExtensions
     /// </param>
     public static IServiceCollection AddQueryHandlers(
         this IServiceCollection services,
-        params Type[] types)
+        params Type[] types
+    )
     {
         return AddQueryHandlers(services, ServiceLifetime.Transient, types);
     }
@@ -567,7 +629,8 @@ public static class EventSourcingExtensions
     public static IServiceCollection AddQueryHandlers(
         this IServiceCollection services,
         ServiceLifetime lifetime,
-        params Type[] types)
+        params Type[] types
+    )
     {
         services.AddGenericTypes(
             types.Select(t => t.Assembly),
@@ -585,15 +648,16 @@ public static class EventSourcingExtensions
     ///     The type of the result returned by the query execution.
     /// </typeparam>
     /// <param name="query">The query to be executed.</param>
-    /// <param name="ct">Optional <see cref="CancellationToken" /> to cancel the execution</param>
+    /// <param name="ct">Optional <see cref="CancellationToken" /> to cancel the execution.</param>
     /// <exception cref="ArgumentNullException" />
     /// <exception cref="InvalidOperationException" />
     public static async Task<TResult> ExecuteAsync<TResult>(
         this IQuery<TResult> query,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(query);
-        return await query.ExecuteAsync(ServiceProvider, ct);
+        return await query.ExecuteAsync(EventSourcingContext.ServiceProvider, ct);
     }
 
     #endregion
